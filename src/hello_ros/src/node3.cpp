@@ -1,15 +1,12 @@
 #include "ros/ros.h"
 #include "std_msgs/Int16.h"
 #include <pthread.h>
-#include <unistd.h> // usleep 함수 사용을 위해 추가
+#include <unistd.h> 
 
-// 전역 퍼블리셔 선언
 ros::Publisher vel_feedback_pub;
-
-// 전역 변수
 int16_t vel_cmd = 0;
 
-// vel_cmd를 받는 콜백 함수
+// node2의 velcmd값 콜백
 void VelCmdCallback(const std_msgs::Int16::ConstPtr& msg)
 {
     ROS_INFO("Node3 received vel_cmd: [%d]", msg->data);
@@ -27,13 +24,11 @@ static void* thread_1(void* unused)
         std_msgs::Int16 msg_vel_feedback;
         msg_vel_feedback.data = vel_cmd + 100;
         
-        // 로그 출력
         ROS_INFO("vel_feedback: [%d] (vel_cmd + 100)", msg_vel_feedback.data);
-        
-        // 토픽 발행
+    
         vel_feedback_pub.publish(msg_vel_feedback);
         
-        // 대기 (10Hz = 100ms)
+        // 대기 (10Hz = 10만 마이크로)
         usleep(100000);
     }
     
@@ -47,28 +42,22 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "node3");
     ros::NodeHandle n;
     
-    // 서브스크라이버 선언
     ros::Subscriber sub_vel_cmd = n.subscribe("vel_cmd", 1000, VelCmdCallback);
     
-    // 퍼블리셔 선언 (vel_feedback만!)
     vel_feedback_pub = n.advertise<std_msgs::Int16>("vel_feedback", 1000);
     
-    // pthread 배열 선언
     pthread_t th[1];
     
-    // 스레드 생성 (스레드 1개만!)
     if (pthread_create(&th[0], nullptr, thread_1, nullptr) != 0) {
         std::perror("pthread_create 0");
         std::exit(1);
     }
     
-    // 스레드 분리
     if (pthread_detach(th[0]) != 0) {
         std::perror("pthread_detach 0");
         std::exit(1);
     }
     
-    // 콜백 함수 대기
     ros::spin();
     
     return 0;

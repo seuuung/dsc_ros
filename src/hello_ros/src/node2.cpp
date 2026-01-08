@@ -1,39 +1,37 @@
 #include "ros/ros.h"
 #include "std_msgs/Int16.h"
 #include <pthread.h>
-#include <unistd.h> // usleep 함수 사용을 위해 추가
+#include <unistd.h> 
 
-// 전역 퍼블리셔 선언
 ros::Publisher vel_cmd_pub;
 ros::Publisher vel_feedback2_pub;
 
-// 전역 변수
 int16_t sensor_1 = 0;
 int16_t sensor_2 = 0;
 int16_t vel_feedback = 0;
 
-// sensor_1을 받는 콜백 함수
+// node1-1의 sensor1 콜백
 void Sensor1Callback(const std_msgs::Int16::ConstPtr& msg)
 {
     ROS_INFO("Node2 received sensor_1: [%d]", msg->data);
     sensor_1 = msg->data;
 }
 
-// sensor_2를 받는 콜백 함수
+// node1-2의 sensor2 콜백
 void Sensor2Callback(const std_msgs::Int16::ConstPtr& msg)
 {
     ROS_INFO("Node2 received sensor_2: [%d]", msg->data);
     sensor_2 = msg->data;
 }
 
-// vel_feedback을 받는 콜백 함수
+//node3의 val_feedback 콜백
 void VelFeedbackCallback(const std_msgs::Int16::ConstPtr& msg)
 {
     ROS_INFO("Node2 received vel_feedback: [%d]", msg->data);
     vel_feedback = msg->data;
 }
 
-// 스레드 1: vel_cmd를 10Hz로 발행
+// 스레드 1: vel_cmd를 10Hz로 발행콜백
 static void* thread_1(void* unused)
 {
     while (ros::ok())
@@ -44,13 +42,11 @@ static void* thread_1(void* unused)
         std_msgs::Int16 msg_vel_cmd;
         msg_vel_cmd.data = sensor_1 + sensor_2;
         
-        // 로그 출력
         ROS_INFO("vel_cmd: [%d] (sensor_1 + sensor_2)", msg_vel_cmd.data);
         
-        // 토픽 발행
         vel_cmd_pub.publish(msg_vel_cmd);
         
-        // 대기 (10Hz = 100ms)
+        // 주기 (10Hz = 10만 마이크로)
         usleep(100000);
     }
     
@@ -69,13 +65,11 @@ static void* thread_2(void* unused)
         std_msgs::Int16 msg_vel_feedback2;
         msg_vel_feedback2.data = vel_feedback / 10;
         
-        // 로그 출력
         ROS_INFO("vel_feedback2: [%d] (vel_feedback / 10)", msg_vel_feedback2.data);
         
-        // 토픽 발행
         vel_feedback2_pub.publish(msg_vel_feedback2);
         
-        // 대기 (1Hz = 1초)
+        // 주기 (1Hz = 100만 마이크로)
         usleep(1000000);
     }
     
@@ -98,7 +92,6 @@ int main(int argc, char **argv)
     vel_cmd_pub = n.advertise<std_msgs::Int16>("vel_cmd", 1000);
     vel_feedback2_pub = n.advertise<std_msgs::Int16>("vel_feedback2", 1000);
     
-    // pthread 배열 선언
     pthread_t th[2];
     
     // 스레드 생성
@@ -123,7 +116,6 @@ int main(int argc, char **argv)
         std::exit(1);
     }
     
-    // 콜백 함수 대기
     ros::spin();
     
     return 0;
